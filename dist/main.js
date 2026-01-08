@@ -16,6 +16,7 @@ const sheets = new spreadsheet_service_1.default((0, secrets_1.env)("SPREADSHEET
 app.event("message", async (data) => {
     try {
         const event = data.event;
+        const client = data.client;
         if (event.bot_id)
             return;
         if (!event.text)
@@ -24,6 +25,7 @@ app.event("message", async (data) => {
         const sendText = event.text.trim();
         const slackUserID = event.user;
         const user = user_maps_prod_1.userMaps.find(user => user.slackUserID === slackUserID);
+        const successReaction = (0, secrets_1.env)("SLACK_SUCCESS_REACTION");
         if (sendText.toLowerCase().startsWith("sod:")) {
             const record = {
                 ...user,
@@ -32,10 +34,24 @@ app.event("message", async (data) => {
                 sod: time.time,
                 eod: null
             };
-            await sheets.addStandupRecord(record);
+            const response = await sheets.addStandupRecord(record);
+            if (response.ok) {
+                await client.reactions.add({
+                    channel: event.channel,
+                    name: successReaction,
+                    timestamp: event.ts
+                });
+            }
         }
         else if (sendText.toLowerCase().startsWith("eod:")) {
-            await sheets.updateEOD(slackUserID, time.time);
+            const response = await sheets.updateEOD(slackUserID, time.time);
+            if (response.ok) {
+                await client.reactions.add({
+                    channel: event.channel,
+                    name: successReaction,
+                    timestamp: event.ts
+                });
+            }
         }
     }
     catch (error) {
