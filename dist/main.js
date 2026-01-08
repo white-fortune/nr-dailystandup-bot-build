@@ -10,8 +10,7 @@ const helpers_1 = require("./utils/helpers");
 const user_maps_prod_1 = require("./database/user_maps.prod");
 const app = new bolt_1.App({
     token: (0, secrets_1.env)("SLACK_BOT_TOKEN"),
-    appToken: (0, secrets_1.env)("SLACK_APP_TOKEN"),
-    socketMode: true
+    signingSecret: (0, secrets_1.env)("SLACK_SIGNING_SECRET"),
 });
 const sheets = new spreadsheet_service_1.default((0, secrets_1.env)("SPREADSHEET_ID"));
 app.event("message", async (data) => {
@@ -45,8 +44,8 @@ app.event("message", async (data) => {
 });
 (async () => {
     try {
-        await app.start();
-        console.log(`The App is running`);
+        await app.start(5000);
+        console.log(`The App is running on port 5000`);
     }
     catch (error) {
         console.error(error);
