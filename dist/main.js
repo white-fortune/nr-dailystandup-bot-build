@@ -15,28 +15,40 @@ const app = new bolt_1.App({
 });
 const sheets = new spreadsheet_service_1.default((0, secrets_1.env)("SPREADSHEET_ID"));
 app.event("message", async (data) => {
-    const event = data.event;
-    if (event.bot_id)
-        return;
-    const time = (0, helpers_1.datetime)(event.ts);
-    const sendText = event.text.trim();
-    const slackUserID = event.user;
-    const user = user_maps_prod_1.userMaps.find(user => user.slackUserID === slackUserID);
-    if (sendText.toLowerCase().startsWith("sod:")) {
-        const record = {
-            ...user,
-            day: time.day,
-            date: time.datetime,
-            sod: time.time,
-            eod: null
-        };
-        await sheets.addStandupRecord(record);
+    try {
+        const event = data.event;
+        if (event.bot_id)
+            return;
+        if (!event.text)
+            return;
+        const time = (0, helpers_1.datetime)(event.ts);
+        const sendText = event.text.trim();
+        const slackUserID = event.user;
+        const user = user_maps_prod_1.userMaps.find(user => user.slackUserID === slackUserID);
+        if (sendText.toLowerCase().startsWith("sod:")) {
+            const record = {
+                ...user,
+                day: time.day,
+                date: time.datetime,
+                sod: time.time,
+                eod: null
+            };
+            await sheets.addStandupRecord(record);
+        }
+        else if (sendText.toLowerCase().startsWith("eod:")) {
+            await sheets.updateEOD(slackUserID, time.time);
+        }
     }
-    else if (sendText.toLowerCase().startsWith("eod:")) {
-        await sheets.updateEOD(slackUserID, time.time);
+    catch (error) {
+        console.error(error);
     }
 });
 (async () => {
-    await app.start();
-    console.log(`The App is running`);
+    try {
+        await app.start();
+        console.log(`The App is running`);
+    }
+    catch (error) {
+        console.error(error);
+    }
 })();
