@@ -32,16 +32,38 @@ app.event("message", async (data) => {
                 day: time.day,
                 date: time.datetime,
                 sod: time.time,
-                eod: null
+                eod: null,
+                sodMessageTimestamp: event.ts
             };
             const response = await sheets.addStandupRecord(record);
-            if (response.ok) {
-                await client.reactions.add({
-                    channel: event.channel,
-                    name: successReaction,
-                    timestamp: event.ts
-                });
+            if (!response.ok)
+                return;
+            if (!response.recorded) {
+                const code = response.code;
+                switch (code) {
+                    case "PENDING_SOD": {
+                        const { pendingSODMessageTimestamp } = response;
+                        const messagePermalink = await client.chat.getPermalink({
+                            channel: event.channel,
+                            message_ts: pendingSODMessageTimestamp
+                        });
+                        if (!messagePermalink.ok)
+                            break;
+                        await client.chat.postEphemeral({
+                            channel: event.channel,
+                            user: slackUserID,
+                            text: `You already have a pending SOD. Please submit your EOD for that first, then you can start a new SOD. \nHere is the SOD: ${messagePermalink.permalink}`
+                        });
+                        break;
+                    }
+                }
+                return;
             }
+            await client.reactions.add({
+                channel: event.channel,
+                name: successReaction,
+                timestamp: event.ts
+            });
         }
         else if (sendText.toLowerCase().startsWith("eod")) {
             const response = await sheets.updateEOD(slackUserID, time.time);

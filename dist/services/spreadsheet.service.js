@@ -22,6 +22,13 @@ class SpreadSheetService {
     */
     async addStandupRecord(record) {
         try {
+            const lastPendingSODResponse = await this.getLastPendingSOD(record.slackUserID);
+            if (!lastPendingSODResponse.ok)
+                return { ok: false };
+            const lastOpenedSODMessageTs = lastPendingSODResponse.sodMessageTimestamp;
+            if (lastOpenedSODMessageTs) {
+                return { ok: true, recorded: false, code: "PENDING_SOD", pendingSODMessageTimestamp: lastOpenedSODMessageTs };
+            }
             //NOTE: Adding the standup record in the main standups sheet
             const addedRow = await this.sheets.spreadsheets.values.append({
                 spreadsheetId: this.spreadsheetId,
@@ -29,14 +36,15 @@ class SpreadSheetService {
                 valueInputOption: "RAW",
                 insertDataOption: "INSERT_ROWS",
                 requestBody: {
-                    values: [Object.values(record)]
+                    values: [Object.values({ ...record, sodMessageTimestamp: "" })]
                 }
             });
             const updatedRange = addedRow.data.updates?.updatedRange;
             const pendingRecord = {
                 slackUserID: record.slackUserID,
                 personalID: record.personalID,
-                lastOpenedSODRange: updatedRange
+                lastOpenedSODRange: updatedRange,
+                sodMessageTimestamp: record.sodMessageTimestamp
             };
             //NOTE: Adding a pending EOD record in pendings sheet
             await this.sheets.spreadsheets.values.append({
@@ -48,7 +56,7 @@ class SpreadSheetService {
                     values: [Object.values(pendingRecord)]
                 }
             });
-            return { ok: true };
+            return { ok: true, recorded: true };
         }
         catch (error) {
             console.error(error);
@@ -88,9 +96,33 @@ class SpreadSheetService {
             const pendingRecordRow = values.findIndex(value => value[0] === slackUserID) + 4;
             await this.sheets.spreadsheets.values.clear({
                 spreadsheetId: this.spreadsheetId,
-                range: `pendings!A${pendingRecordRow}:C${pendingRecordRow}`,
+                range: `pendings!A${pendingRecordRow}:D${pendingRecordRow}`,
             });
             return { ok: true };
+        }
+        catch (error) {
+            console.error(error);
+            return { ok: false };
+        }
+    }
+    async getLastPendingSOD(slackUserID) {
+        try {
+            const pendingRecord = await this.sheets.spreadsheets.values.get({
+                spreadsheetId: this.spreadsheetId,
+                range: "pendings!A4:D"
+            });
+            const values = pendingRecord.data.values;
+            if (!values)
+                return { ok: true };
+            //NOTE: Getting the pending records of the user with slackUserID
+            const records = values.filter(value => value[0] === slackUserID);
+            if (records.length === 0) {
+                return { ok: true };
+            }
+            //NOTE: Getting the last pending record as assuming its always the case that there will always be one pending eod record of a specific user at a time
+            const record = records[records.length - 1];
+            const sodMessageTimestamp = record[3];
+            return { ok: true, sodMessageTimestamp };
         }
         catch (error) {
             console.error(error);
