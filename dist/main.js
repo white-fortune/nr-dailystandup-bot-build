@@ -26,7 +26,7 @@ app.event("message", async (data) => {
         const slackUserID = event.user;
         const user = user_maps_prod_1.userMaps.find(user => user.slackUserID === slackUserID);
         const successReaction = (0, secrets_1.env)("SLACK_SUCCESS_REACTION");
-        if (sendText.toLowerCase().startsWith("sod:")) {
+        if (sendText.toLowerCase().startsWith("sod")) {
             const record = {
                 ...user,
                 day: time.day,
@@ -43,7 +43,7 @@ app.event("message", async (data) => {
                 });
             }
         }
-        else if (sendText.toLowerCase().startsWith("eod:")) {
+        else if (sendText.toLowerCase().startsWith("eod")) {
             const response = await sheets.updateEOD(slackUserID, time.time);
             if (response.ok) {
                 await client.reactions.add({
