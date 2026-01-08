@@ -1,0 +1,23 @@
+{
+  "name": "daily-standup",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "dev": "ts-node-dev --respawn --transpile-only src/main.ts",
+    "preview": "node dist/main.js",
+    "build": "tsc"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "ts-node-dev": "^2.0.0"
+  },
+  "dependencies": {
+    "@google-cloud/local-auth": "^2.1.0",
+    "@slack/bolt": "^4.6.0",
+    "dotenv": "^17.2.3",
+    "googleapis": "^105.0.0"
+  }
+}
